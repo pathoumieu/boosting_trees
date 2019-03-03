@@ -81,6 +81,7 @@ def estimate_probas(y, weights, classes=None):
     Compute empirical probabilities for classes given y taking into account
     sample weights.
     """
+    # TODO: use (y==tar)*weights instead of argwhere
     if classes is None:
         classes = np.unique(y)
     return [np.sum(weights[np.argwhere(y == tar)]) / np.sum(weights) for tar in classes]

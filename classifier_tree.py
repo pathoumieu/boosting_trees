@@ -52,6 +52,26 @@ class Classifier_Tree(object):
         self.min_sample_leaf = min_sample_leaf
         self.criterion = criterion
 
+    def fit(self, x, y, weights=None):
+        """
+        Fit Decision Tree Classifier of maximum depth 'max_depth' on population
+        (x, y).
+
+        Parameters
+        ----------
+        x: np.array
+            Features.
+        y: np.array
+            Targets.
+        weights: np.array
+            Weights for samples. If None, all samples have the same weight.
+        """
+        self.classes = np.unique(y)
+        self.bin_tree = Binary_Tree()
+        if weights is None:
+            weights = np.ones(len(y))
+        self.train(x, y, weights, self.max_depth, self.bin_tree)
+
     def train(self, x, y, weights, depth, bin_tree):
         """
         Construct recursively a Decision Tree on population (x, y).
@@ -97,26 +117,6 @@ class Classifier_Tree(object):
                        depth-1, right_child)
             bin_tree.right_child = right_child
 
-    def fit(self, x, y, weights=None):
-        """
-        Fit Decision Tree Classifier of maximum depth 'max_depth' on population
-        (x, y).
-
-        Parameters
-        ----------
-        x: np.array
-            Features.
-        y: np.array
-            Targets.
-        weights: np.array
-            Weights for samples. If None, all samples have the same weight.
-        """
-        self.classes = np.unique(y)
-        self.bin_tree = Binary_Tree()
-        if weights is None:
-            weights = np.ones(len(y))
-        self.train(x, y, weights, self.max_depth, self.bin_tree)
-
     def predict_probas(self, x_test, y_test):
         """
         Return scores for population (x_test, y_test). For a given sample
@@ -143,6 +143,21 @@ class Classifier_Tree(object):
                     bin_tree = bin_tree.right_child
             probas.append(bin_tree.probas)
         return np.array(probas)
+
+    def predict(self, x_test, y_test):
+        """
+        Return class predictions for population (x_test, y_test). For a given
+        sample (x, y), its prediction is the argmax of the score.
+
+        Parameters
+        ----------
+        x_test: np.array
+            Features.
+        y_test: np.array
+            Targets.
+        """
+        probas = self.predict_probas(x_test, y_test)
+        return np.array([self.classes[pred] for pred in np.argmax(probas, axis=1)])
 
     def prune(self):
         """
