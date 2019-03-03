@@ -1,7 +1,6 @@
-from collections import Counter
 import numpy as np
 
-from feature_split import compute_best_feature, split
+from feature_split import estimate_probas, compute_best_feature, split
 
 
 class Binary_Tree(object):
@@ -53,7 +52,7 @@ class Classifier_Tree(object):
         self.min_sample_leaf = min_sample_leaf
         self.criterion = criterion
 
-    def train(self, x, y, depth, bin_tree):
+    def train(self, x, y, weights, depth, bin_tree):
         """
         Construct recursively a Decision Tree on population (x, y).
 
@@ -63,6 +62,8 @@ class Classifier_Tree(object):
             Features.
         y: np.array
             Targets.
+        weights: np.array
+            Weights for samples.
         depth: int
             Tree depth that is left. Also number of iterations left to do in
             recursive funcion.
@@ -70,17 +71,15 @@ class Classifier_Tree(object):
             Binary Tree to start from. May be the child of previously constructed
             trees.
         """
-        count = Counter(y)
-        class_count = [count[i] if i in count.keys() else 0.0 for i in self.classes]
-        bin_tree.probas = np.array(class_count) / float(sum(class_count))
+        bin_tree.probas = estimate_probas(y, weights, self.classes)
 
         # Stop fitting when population is size 1, depth argument is O,
         # or remaining population contains only 1 target.
-        if (len(x) < self.min_sample_leaf) | (depth == 0) | (len(count) == 1):
+        if (len(x) < self.min_sample_leaf) | (depth == 0) | (len(set(y)) == 1):
             return
 
         else:
-            bin_tree.node = compute_best_feature(x, y, self.criterion)
+            bin_tree.node = compute_best_feature(x, y, weights, self.criterion)
             best_feature, best_metric, best_value = bin_tree.node
 
             # Split indexes
@@ -88,17 +87,17 @@ class Classifier_Tree(object):
 
             # Construct tree for left population
             left_child = Binary_Tree()
-            self.train(x[left_idx.flatten()], y[left_idx].flatten(),
+            self.train(x[left_idx], y[left_idx], weights[left_idx],
                        depth-1, left_child)
             bin_tree.left_child = left_child
 
             # Construct tree for right population
             right_child = Binary_Tree()
-            self.train(x[right_idx.flatten()], y[right_idx].flatten(),
+            self.train(x[right_idx], y[right_idx], weights[right_idx],
                        depth-1, right_child)
             bin_tree.right_child = right_child
 
-    def fit(self, x, y):
+    def fit(self, x, y, weights=None):
         """
         Fit Decision Tree Classifier of maximum depth 'max_depth' on population
         (x, y).
@@ -109,10 +108,14 @@ class Classifier_Tree(object):
             Features.
         y: np.array
             Targets.
+        weights: np.array
+            Weights for samples. If None, all samples have the same weight.
         """
         self.classes = np.unique(y)
         self.bin_tree = Binary_Tree()
-        self.train(x, y, self.max_depth, self.bin_tree)
+        if weights is None:
+            weights = np.ones(len(y))
+        self.train(x, y, weights, self.max_depth, self.bin_tree)
 
     def predict_probas(self, x_test, y_test):
         """
