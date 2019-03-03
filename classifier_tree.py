@@ -33,7 +33,7 @@ class Classifier_Tree(object):
     """
     Class defining decision tree classifier learning algorithm.
     """
-    def __init__(self, max_depth=5, criterion='gini'):
+    def __init__(self, max_depth=5, min_sample_leaf=2, criterion='gini'):
         """
         Initialize classifier max_depth and criterion for computing best binary
         splits.
@@ -42,11 +42,15 @@ class Classifier_Tree(object):
         ----------
         max_depth: int
             Maximum depth of Decision Tree that will be constructed.
+        min_sample_leaf: int
+            Minimum number of samples in node required to perform another
+            split.
         criterion: str
             Criterion used for computing best splits. Can be either 'gini' or
             'entropy'.
         """
         self.max_depth = max_depth
+        self.min_sample_leaf = min_sample_leaf
         self.criterion = criterion
 
     def train(self, x, y, depth, bin_tree):
@@ -72,7 +76,7 @@ class Classifier_Tree(object):
 
         # Stop fitting when population is size 1, depth argument is O,
         # or remaining population contains only 1 target.
-        if (len(x) == 1) | (depth == 0) | (len(count) == 1):
+        if (len(x) < self.min_sample_leaf) | (depth == 0) | (len(count) == 1):
             return
 
         else:
