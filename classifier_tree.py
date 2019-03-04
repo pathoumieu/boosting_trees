@@ -69,7 +69,7 @@ class Classifier_Tree(object):
         self.classes = np.unique(y)
         self.bin_tree = Binary_Tree()
         if weights is None:
-            weights = np.ones(len(y))
+            weights = np.ones(len(y), dtype=float)
         self.train(x, y, weights, self.max_depth, self.bin_tree)
 
     def train(self, x, y, weights, depth, bin_tree):
@@ -99,7 +99,8 @@ class Classifier_Tree(object):
             return
 
         else:
-            bin_tree.node = compute_best_feature(x, y, weights, self.criterion)
+            bin_tree.node = compute_best_feature(x, y, weights,
+                                                 self.classes, self.criterion)
             best_feature, best_metric, best_value = bin_tree.node
 
             # Split indexes

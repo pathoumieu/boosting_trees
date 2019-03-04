@@ -1,7 +1,7 @@
 import numpy as np
 
 
-def compute_best_feature(x, y, weights, criterion='gini'):
+def compute_best_feature(x, y, weights, classes, criterion='gini'):
     """
     Compute best feature to perform binary split according to criterion on a
     given population (x, y).
@@ -12,6 +12,8 @@ def compute_best_feature(x, y, weights, criterion='gini'):
         Features.
     y: np.array
         Targets.
+    classes: np.ndarray
+        Array of different values of target in train dataset.
     criterion: str
         Criterion for defining best split. Can be either 'entropy' or 'gini'.
     """
@@ -23,7 +25,9 @@ def compute_best_feature(x, y, weights, criterion='gini'):
     feature_best_split_metrics = []
     feature_best_split_value = []
     for feature in x.T:
-        best_metric, best_value = compute_best_split(feature, y, weights, metric)
+        best_metric, best_value = compute_best_split(feature, y,
+                                                     weights, classes,
+                                                     metric)
         feature_best_split_metrics.append(best_metric)
         feature_best_split_value.append(best_value)
 
@@ -35,7 +39,7 @@ def compute_best_feature(x, y, weights, criterion='gini'):
     return best_feature, best_metric, best_value
 
 
-def compute_best_split(feature, y, weights, metric):
+def compute_best_split(feature, y, weights, classes, metric):
     """
     Compute best value to perform split on given feature for given metric.
 
@@ -45,6 +49,8 @@ def compute_best_split(feature, y, weights, metric):
         Feature.
     y: np.array
         Target.
+    classes: np.ndarray
+        Array of different values of target in train dataset.
     metric: func
         Criterion for defining best split. Can be either gini or entropy.
     """
@@ -53,9 +59,11 @@ def compute_best_split(feature, y, weights, metric):
     split_values = []
 
     # Case : continuous
-    for value in np.sort(feature):
+    for value in np.sort(feature)[:-1]:
         left_idx, right_idx = split(feature, value)
-        metrics_list.append(split_metric(left_idx, right_idx, y, weights, metric))
+        metrics_list.append(split_metric(left_idx, right_idx,
+                                         y, weights,
+                                         classes, metric))
         split_values.append(value)
         count += 1
 
@@ -76,35 +84,32 @@ def split(x, value):
     return np.argwhere(x <= value).flatten(), np.argwhere(x > value).flatten()
 
 
-def estimate_probas(y, weights, classes=None):
+def estimate_probas(y, weights, classes):
     """
     Compute empirical probabilities for classes given y taking into account
     sample weights.
     """
-    # TODO: use (y==tar)*weights instead of argwhere
-    if classes is None:
-        classes = np.unique(y)
-    return [np.sum(weights[np.argwhere(y == tar)]) / np.sum(weights) for tar in classes]
+    return [np.dot(weights, (y == tar)) / np.sum(weights) for tar in classes]
 
 
-def gini(y, weights):
+def gini(y, weights, classes):
     """
     Compute gini of target vector y.
     """
-    probas = estimate_probas(y, weights)
-    return np.sum([p * (1-p) for p in probas])
+    probas = estimate_probas(y, weights, classes)
+    return np.sum(np.array(probas) * (1 - np.array(probas)))
 
 
-def entropy(y, weights):
+def entropy(y, weights, classes):
     """
     Compute entropy of target vector y.
     """
     epsilon = 1e-6
-    probas = estimate_probas(y, weights)
-    return -np.sum([p * np.log(p + epsilon) for p in probas])
+    probas = estimate_probas(y, weights, classes)
+    return - np.sum(np.array(probas) * np.log(np.array(probas) + epsilon))
 
 
-def split_metric(left_idx, right_idx, y, weights, metric):
+def split_metric(left_idx, right_idx, y, weights, classes, metric):
     """
     Compute metric for given split, taking weighted average over the two
     populations.
@@ -112,7 +117,9 @@ def split_metric(left_idx, right_idx, y, weights, metric):
     left_y, right_y = y[left_idx], y[right_idx]
     left_weights, right_weights = weights[left_idx], weights[right_idx]
     return (np.sum(left_weights) * metric(left_y,
-                                          left_weights)
+                                          left_weights,
+                                          classes)
             + np.sum(right_weights) * metric(right_y,
-                                             right_weights)) \
+                                             right_weights,
+                                             classes)) \
         / np.sum(weights)
